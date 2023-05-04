@@ -3,7 +3,7 @@ import pyttsx3
 import speech_recognition as sr
 import time
 
-openai.api_key = "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"
+openai.api_key = "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"
 
 engine = pyttsx3.init()
 
@@ -58,7 +58,7 @@ def main():
                         response = generate_response(text)
                         print(f"GPT-3 says: {response}")
                     
-                        speak_text(response)
+                        speak_test(response)
             except Exception as e:
                 print("An error occurred: {}".format(e))
 
