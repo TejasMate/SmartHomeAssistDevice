@@ -1,66 +1,54 @@
-import openai
 import pyttsx3
-import speech_recognition as sr
-import time
 
-openai.api_key = "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"
+from services.speech_service import SpeechService
+from services.model_service import ModelService
+from config import MODEL_TYPE
 
-engine = pyttsx3.init()
-
-def transcribe_audio_to_text(filename):
-    recognizer = sr.Recognizer()
-    with sr.AudioFile(filename) as source:
-        audio = recognizer.record(source)
-    try:
-        return recognizer.recognize_google(audio)
-    except:
-        print('Skipping unknown error')
+class SmartAssistant:
+    def __init__(self):
+        self.speech_service = SpeechService()
+        self.model_service = ModelService()
+        self.engine = pyttsx3.init()
     
-def generate_response(prompt):
-    response = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=prompt,
-        max_tokens=4000,
-        n=1,
-        stop=None,
-        temperature=0.5,
-)
-    return response["choices"][0]["text"]
+    def speak_response(self, text):
+        """Speak the response using text-to-speech."""
+        self.engine.say(text)
+        self.engine.runAndWait()
+    
+    def run(self):
+        """Main loop for the assistant."""
+        while True:
+            print(f"Say 'Genius' to start recording your question... (Using {MODEL_TYPE} model)")
+            
+            # Listen for wake word
+            transcription = self.speech_service.listen_for_wake_word()
+            if not transcription:
+                continue
+            
+            # Get user's question
+            print("Say your question...")
+            question = self.speech_service.process()
+            if not question:
+                continue
+            
+            # Remove wake word if present
+            question = self.speech_service.remove_wake_word(question)
+            print(f"You said: {question}")
+            
+            # Generate and speak response
+            response = self.model_service.process(question)
+            if response:
+                print(f"AI Response: {response}")
+                self.speak_response(response)
 
-
-def speak_test(test):
-    engine.say(test)   
-    engine.runAndWait()
-  
 def main():
-    while True:
-        print("Say 'Genius' to start recording your question...")
-        with sr.Microphone() as source:
-            recognizer = sr.Recognizer()
-            audio = recognizer.listen(source)
-      
-            try:
-                transcription = recognizer.recognize_google(audio)
-                if transcription.lower() == "genius":
-                    filename = "input.wav"
-                    print("Say your question... ")
-                    with sr.Microphone() as source:
-                        recognizer = sr.Recognizer()
-                        source.pause_threshold = 1
-                        audio = recognizer.listen(source, phrase_time_limit=None, timeout=None)
-                        with open(filename, "wb") as f:
-                            f.write(audio.get_wav_data())
-                    
-                    text = transcribe_audio_to_text(filename)
-                    if text:
-                        print(f"You said: {text}")
-
-                        response = generate_response(text)
-                        print(f"GPT-3 says: {response}")
-                    
-                        speak_test(response)
-            except Exception as e:
-                print("An error occurred: {}".format(e))
+    assistant = SmartAssistant()
+    try:
+        assistant.run()
+    except KeyboardInterrupt:
+        print("\nGoodbye!")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
     main()
